@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://c4wo4mrqxse3l"]
+
+[ext_resource type="Script" path="res://weapons/shield.gd" id="1_nx1je"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_ual3e"]
+size = Vector3(0.56, 0.83, 0.04)
+
+[node name="shield" type="Node3D"]
+script = ExtResource("1_nx1je")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.42276)
+mesh = SubResource("BoxMesh_ual3e")

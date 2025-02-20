@@ -114,7 +114,7 @@ func handle_movement(delta):
 	was_on_floor = is_on_floor()
 	
 	# Don't process regular movement if rolling or blocking
-	if !is_rolling and !is_blocking:
+	if !is_rolling:
 		input_dir = Input.get_vector("left", "right", "up", "down")
 		
 		if is_targeting and target_enemy:
@@ -131,11 +131,13 @@ func handle_movement(delta):
 			# Set base speed and modify based on state
 			var current_speed = SPEED
 			
-			# Stop completely during swing, slow during charge
-			if is_attacking and !sword.is_charging:  # Allow movement during charge
-				current_speed = 0.0
+			# Handle different movement states
+			if is_attacking and !sword.is_charging:
+				current_speed = 0.0  # No movement during attack
 			elif sword.is_charging:
 				current_speed *= sword.CHARGE_MOVEMENT_SPEED_MULT
+			elif is_blocking:
+				current_speed *= 0.4  # 40% speed while blocking
 			
 			# Apply movement
 			velocity.x = direction.x * current_speed
@@ -213,6 +215,7 @@ func start_roll():
 	if !is_rolling and !is_attacking and !is_blocking and is_on_floor():
 		is_rolling = true
 		is_invulnerable = true
+		shield.stow()  # Call stow function
 		roll_timer = ROLL_DURATION
 		action_state = ActionState.ROLL
 
@@ -220,11 +223,14 @@ func start_block():
 	if !is_blocking and !is_rolling and !is_attacking and is_on_floor():
 		is_blocking = true
 		shield_sound.play()
+		shield.shield()  # Call shield function
 		action_state = ActionState.BLOCK
+
 
 func end_block():
 	if is_blocking:
 		is_blocking = false
+		shield.equip()  # Call equip function
 		action_state = ActionState.IDLE
 
 func toggle_targeting():
