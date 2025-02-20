@@ -87,14 +87,14 @@ func handle_movement(delta):
 			land_sound.play()
 			
 		# Handle jump buffer
-		if jump_buffer_timer > 0:
+		if jump_buffer_timer > 0.0:
 			perform_jump()
-			jump_buffer_timer = 0
+			jump_buffer_timer = 0.0
 	
 	was_on_floor = is_on_floor()
 	
 	# Handle movement
-	if !is_rolling and !is_blocking:  # Removed attack check from here
+	if !is_rolling and !is_blocking:
 		input_dir = Input.get_vector("left", "right", "up", "down")
 		
 		if is_targeting and target_enemy:
@@ -104,7 +104,7 @@ func handle_movement(delta):
 			direction = right * input_dir.x + target_dir * -input_dir.y
 		else:
 			# Normal movement
-			direction = Vector3(input_dir.x, 0, input_dir.y).normalized()
+			direction = Vector3(input_dir.x, 0.0, input_dir.y).normalized()
 			direction = direction.rotated(Vector3.UP, cam_piv.rotation.y)
 		
 		if direction:
@@ -113,7 +113,7 @@ func handle_movement(delta):
 			
 			# Stop completely during swing, slow during charge
 			if is_attacking and !sword.is_charging:  # Allow movement during charge
-				current_speed = 0
+				current_speed = 0.0
 			elif sword.is_charging:
 				current_speed *= sword.CHARGE_MOVEMENT_SPEED_MULT
 			
@@ -128,13 +128,20 @@ func handle_movement(delta):
 			
 			if is_on_floor():
 				action_state = ActionState.WALK
+				
+			# Animate legs based on actual movement speed
+			var speed = Vector2(velocity.x, velocity.z).length() / SPEED
+			leg_animator.animate_legs(delta, speed)
 		else:
 			# Stop movement when no direction
-			velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
-			velocity.z = move_toward(velocity.z, 0, FRICTION * delta)
+			velocity.x = move_toward(velocity.x, 0.0, FRICTION * delta)
+			velocity.z = move_toward(velocity.z, 0.0, FRICTION * delta)
 			
 			if is_on_floor():
 				action_state = ActionState.IDLE
+			
+			# Animate legs with zero speed to return to neutral
+			leg_animator.animate_legs(delta, 0.0)
 
 func handle_targeting(delta):
 	if is_targeting and target_enemy:
