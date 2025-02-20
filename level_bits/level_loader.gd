@@ -89,7 +89,6 @@ func load_level(level_name: String) -> void:
 	player.last_safe_position = Vector3.ZERO  # Update checkpoint system
 	
 	# Reset player state
-	player.jumps_remaining = player.MAX_JUMPS
 	player.action_state = player.ActionState.IDLE
 	player.is_attacking = false
 	player.is_rolling = false
