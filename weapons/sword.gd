@@ -10,7 +10,7 @@ const SWIPE_DURATION = 0.15
 const RETURN_DURATION = 0.1
 const CHARGE_TIME = 1.0
 const SPIN_ATTACK_DURATION = 0.35  # Much faster spin
-const AERIAL_STRIKE_SPEED = 15.0
+const AERIAL_STRIKE_SPEED = 2.0
 const CHARGE_MOVEMENT_SPEED_MULT = 0.4
 const CHARGE_SCALE_MAX = 1.2
 
@@ -113,6 +113,7 @@ func handle_charge(delta: float) -> void:
 	if charge_time >= CHARGE_TIME and charge_particles:
 		charge_particles.amount = 20.0
 
+
 func handle_animation(delta: float) -> void:
 	cut_stuff()
 	animation_time += delta
@@ -120,6 +121,10 @@ func handle_animation(delta: float) -> void:
 	var duration = SWIPE_DURATION
 	if current_attack_type == AttackType.SPIN:
 		duration = SPIN_ATTACK_DURATION
+	elif current_attack_type == AttackType.AERIAL:
+		# Don't end aerial strike animation until landing
+		if not player.is_on_floor():
+			animation_time = min(animation_time, duration)
 	
 	if animation_time <= duration:
 		var t = animation_time / duration
@@ -131,11 +136,14 @@ func handle_animation(delta: float) -> void:
 		if player:
 			player.find_child("mesh").scale = player_start_scale.lerp(player_target_scale, t)
 	else:
+		# Only end aerial strike when on ground
+		if current_attack_type == AttackType.AERIAL and not player.is_on_floor():
+			return
 		handle_animation_end(delta, duration)
 
 func handle_animation_end(delta: float, duration: float):
 	var return_progress = (animation_time - duration) / RETURN_DURATION
-	
+	rotation.x = deg_to_rad(0.0)
 	if return_progress >= 1.0:
 		is_animating = false
 		rotation.y = 0.0
@@ -217,14 +225,15 @@ func start_aerial_strike():
 		animation_time = 0.0
 		swoosh_sound.play()
 		
+		# Lock rotation for downward thrust
 		start_y_rotation = rotation.y
-		rotation.z = deg_to_rad(90.0)
-		target_y_rotation = start_y_rotation
+		rotation.z = deg_to_rad(70.0)
+		rotation.x = deg_to_rad(90.0)
+		target_y_rotation = deg_to_rad(90.0)
 		
-		player.velocity.y = -AERIAL_STRIKE_SPEED
-		player.velocity.x = 0.0
-		player.velocity.z = 0.0
-
+		# Set downward velocity
+		player.start_aerial_strike()
+		
 func find_root(node=get_tree().root) -> Node:
 	if node.name.to_lower() == "level_loader":
 		return node

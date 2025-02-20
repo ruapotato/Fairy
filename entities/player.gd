@@ -19,7 +19,8 @@ const SPEED = 4.0  # Slightly slower base speed for more deliberate movement
 const ACCELERATION = 30.0  # Faster acceleration for responsive controls
 const FRICTION = 60.0
 const ROTATION_SPEED = 20.0  # Faster rotation for responsive targeting
-
+const AERIAL_STRIKE_GRAVITY_MULT = 1.5  # Faster falling during strike
+const AERIAL_STRIKE_SPEED = 3.0
 # Movement States
 enum ActionState {IDLE, WALK, JUMP, ROLL, ATTACK, BLOCK, HURT}
 
@@ -75,9 +76,23 @@ func _physics_process(delta):
 	update_timers(delta)
 	move_and_slide()
 
+func start_aerial_strike():
+	velocity.y = -AERIAL_STRIKE_SPEED
+	velocity.x = 0.0
+	velocity.z = 0.0
+	is_attacking = true
+	action_state = ActionState.ATTACK
+
 func handle_movement(delta):
 	if not is_on_floor():
-		velocity.y -= gravity * delta
+		# Apply increased gravity during aerial strike
+		if is_attacking and sword.current_attack_type == sword.AttackType.AERIAL:
+			velocity.y -= gravity * AERIAL_STRIKE_GRAVITY_MULT * delta
+			velocity.x = 0.0
+			velocity.z = 0.0
+			return  # Lock all movement during aerial strike
+		else:
+			velocity.y -= gravity * delta
 		
 		# Handle coyote time
 		if was_on_floor:
@@ -86,6 +101,11 @@ func handle_movement(delta):
 		if !was_on_floor:
 			land_sound.play()
 			
+			# If we landed from aerial strike
+			if is_attacking and sword.current_attack_type == sword.AttackType.AERIAL:
+				is_attacking = false
+				action_state = ActionState.IDLE
+			
 		# Handle jump buffer
 		if jump_buffer_timer > 0.0:
 			perform_jump()
@@ -93,7 +113,7 @@ func handle_movement(delta):
 	
 	was_on_floor = is_on_floor()
 	
-	# Handle movement
+	# Don't process regular movement if rolling or blocking
 	if !is_rolling and !is_blocking:
 		input_dir = Input.get_vector("left", "right", "up", "down")
 		
@@ -103,7 +123,7 @@ func handle_movement(delta):
 			var right = target_dir.cross(Vector3.UP)
 			direction = right * input_dir.x + target_dir * -input_dir.y
 		else:
-			# Normal movement
+			# Normal movement relative to camera
 			direction = Vector3(input_dir.x, 0.0, input_dir.y).normalized()
 			direction = direction.rotated(Vector3.UP, cam_piv.rotation.y)
 		
