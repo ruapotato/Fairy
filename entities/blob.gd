@@ -5,9 +5,10 @@ extends CharacterBody3D
 @onready var mesh = $mesh
 @onready var walk_sound = $walk_sound
 @onready var die_sound = $die_sound
+@onready var ground_check = $mesh/ground_check
 
-const PATROL_SPEED = 2.0
-const CHASE_SPEED = 3.0
+const PATROL_SPEED = 1.5
+const CHASE_SPEED = 2.5
 const DETECTION_RADIUS = 6.0
 const SQUISH_SPEED = 6.0
 const SQUISH_AMOUNT = 0.6
@@ -34,6 +35,11 @@ func _ready() -> void:
 		initial_y_scale = mesh.scale.y
 		initial_death_scale = initial_y_scale
 		setup_initial_direction()
+
+func is_ground_ahead() -> bool:
+	if not ground_check:
+		return true
+	return ground_check.has_overlapping_bodies()
 
 func setup_initial_direction():
 	if not mesh:
@@ -117,7 +123,9 @@ func am_i_dead():
 
 func can_i_bite():
 	if not is_dying and player in player_hurt_zone.get_overlapping_bodies():
-		player.die()
+		var knockback_direction = (player.global_position - global_position).normalized()
+		# Call take_damage with damage amount and knockback direction
+		player.take_damage(1, knockback_direction)
 
 func check_player_distance() -> bool:
 	if not player:
@@ -142,7 +150,12 @@ func chase_player() -> Vector3:
 			var target_angle = atan2(direction_to_player.x, direction_to_player.z)
 			mesh.rotation.y = target_angle + PI
 	
-	return direction_to_player * CHASE_SPEED
+	# Only return movement vector if there's ground ahead
+	if is_ground_ahead():
+		return direction_to_player * CHASE_SPEED
+	else:
+		# Stop at cliff edge while chasing
+		return Vector3.ZERO
 
 func update_squish_animation(delta: float) -> void:
 	if not mesh or is_dying:
@@ -172,6 +185,10 @@ func _physics_process(delta: float) -> void:
 	if was_chasing and not is_chasing:
 		face_patrol_direction()
 	
+	# Check for ground ahead and flip if no ground during patrol
+	if not is_chasing and not is_ground_ahead():
+		flip_patrol_direction()
+	
 	var movement = chase_player() if is_chasing else patrol()
 	
 	velocity.x = movement.x
@@ -185,7 +202,6 @@ func _physics_process(delta: float) -> void:
 				flip_patrol_direction()
 	
 	update_squish_animation(delta)
-
 
 func _on_walk_sound_finished() -> void:
 	walk_sound.play()

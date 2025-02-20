@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://bej60nbr21nhf"]
+[gd_scene load_steps=19 format=3 uid="uid://bej60nbr21nhf"]
 
 [ext_resource type="Script" path="res://entities/player.gd" id="2_ivawi"]
 [ext_resource type="PackedScene" uid="uid://dq2oduog3uqon" path="res://import/player2.glb" id="2_tbhwb"]
@@ -12,7 +12,6 @@
 [ext_resource type="AudioStream" uid="uid://h0t44k24ssa4" path="res://audio/player_die.wav" id="6_6xmlh"]
 [ext_resource type="Material" uid="uid://crvy883wu6c3d" path="res://native/coin.tres" id="7_owcj2"]
 [ext_resource type="AudioStream" uid="uid://c70jue3ppwvra" path="res://audio/flip.wav" id="7_v8a6e"]
-[ext_resource type="AudioStream" uid="uid://u5l0i52gkx7k" path="res://audio/checkpoint.wav" id="8_f77jv"]
 [ext_resource type="PackedScene" uid="uid://cp3tfcsdvqea1" path="res://entities/fairy.tscn" id="14_3ypbf"]
 [ext_resource type="AudioStream" uid="uid://cyfkojsywoyr2" path="res://audio/sword.wav" id="14_bvvis"]
 [ext_resource type="AudioStream" uid="uid://nh5tcl3dr3v8" path="res://audio/player_toe_tip.wav" id="15_jlucp"]
@@ -94,7 +93,7 @@ max_db = -15.0
 
 [node name="shield" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.270659, 0)
-stream = ExtResource("8_f77jv")
+stream = ExtResource("15_jlucp")
 
 [node name="dash" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
 stream = ExtResource("14_bvvis")

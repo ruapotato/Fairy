@@ -224,12 +224,11 @@ func start_roll():
 		action_state = ActionState.ROLL
 
 func start_block():
-	if !is_blocking and !is_rolling and !is_attacking and is_on_floor():
+	if !is_blocking and !is_rolling and !is_attacking:
 		is_blocking = true
 		shield_sound.play()
 		shield.shield()  # Call shield function
 		action_state = ActionState.BLOCK
-
 
 func end_block():
 	if is_blocking:

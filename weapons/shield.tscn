@@ -11,11 +11,12 @@ size = Vector3(0.525, 0.78, 0.06)
 [node name="shield" type="Node3D"]
 script = ExtResource("1_nx1je")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+[node name="RigidBody3D" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.42276)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="RigidBody3D"]
 mesh = SubResource("BoxMesh_ual3e")
+skeleton = NodePath("../..")
 
-[node name="RigidBody3D" type="RigidBody3D" parent="MeshInstance3D"]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D/RigidBody3D"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="RigidBody3D"]
 shape = SubResource("BoxShape3D_bitm3")

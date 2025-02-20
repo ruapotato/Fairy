@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3 uid="uid://bkq53i8fkkjf8"]
+[gd_scene load_steps=9 format=3 uid="uid://bkq53i8fkkjf8"]
 
 [ext_resource type="Script" path="res://entities/blob.gd" id="1_eirte"]
 [ext_resource type="PackedScene" uid="uid://bv20rjmvt3f7s" path="res://entities/blob.glb" id="2_h5pwi"]
@@ -8,11 +8,14 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_c6qkn"]
 size = Vector3(0.52, 0.375, 0.315)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_wn4o7"]
+size = Vector3(0.115, 0.165, 0.155)
+
 [sub_resource type="BoxShape3D" id="BoxShape3D_bkb0v"]
-size = Vector3(0.43, 0.105, 0.383682)
+size = Vector3(0.355, 0.105, 0.299)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_kk2ey"]
-size = Vector3(0.53, 0.3, 0.355)
+size = Vector3(0.53, 0.3, 0.43)
 
 [node name="blob" type="CharacterBody3D"]
 script = ExtResource("1_eirte")
@@ -25,6 +28,12 @@ shape = SubResource("BoxShape3D_c6qkn")
 
 [node name="blob2" parent="mesh" instance=ExtResource("2_h5pwi")]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
+
+[node name="ground_check" type="Area3D" parent="mesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.0899462, -0.286002)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="mesh/ground_check"]
+shape = SubResource("BoxShape3D_wn4o7")
 
 [node name="KillArea3D" type="Area3D" parent="."]
 

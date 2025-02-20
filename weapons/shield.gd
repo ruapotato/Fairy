@@ -1,6 +1,6 @@
 extends Node3D
 
-@onready var collision_shape = $MeshInstance3D/RigidBody3D/CollisionShape3D
+@onready var collision_shape = $RigidBody3D/CollisionShape3D
 
 const SHIELD_CARRY = 66.6
 const SHIELD_ACTIVE = 0.0
