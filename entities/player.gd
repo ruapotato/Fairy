@@ -13,6 +13,8 @@ extends CharacterBody3D
 @onready var land_sound = $mesh/player_sounds/land
 @onready var shield_sound = $mesh/player_sounds/shield
 @onready var hurt_sound = $mesh/player_sounds/hurt
+@onready var right_arm = $mesh/right_arm
+@onready var left_arm = $mesh/left_arm
 
 # Movement constants
 const SPEED = 4.0  # Slightly slower base speed for more deliberate movement
@@ -68,6 +70,8 @@ func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	cam_piv.top_level = true
 	cam_piv.position = Vector3.ZERO
+
+	
 
 func _physics_process(delta):
 	handle_movement(delta)

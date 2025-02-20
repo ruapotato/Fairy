@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://bej60nbr21nhf"]
+[gd_scene load_steps=20 format=3 uid="uid://bej60nbr21nhf"]
 
 [ext_resource type="Script" path="res://entities/player.gd" id="2_ivawi"]
 [ext_resource type="PackedScene" uid="uid://dq2oduog3uqon" path="res://import/player2.glb" id="2_tbhwb"]
@@ -17,6 +17,7 @@
 [ext_resource type="AudioStream" uid="uid://cyfkojsywoyr2" path="res://audio/sword.wav" id="14_bvvis"]
 [ext_resource type="AudioStream" uid="uid://nh5tcl3dr3v8" path="res://audio/player_toe_tip.wav" id="15_jlucp"]
 [ext_resource type="PackedScene" uid="uid://c4wo4mrqxse3l" path="res://weapons/shield.tscn" id="16_8c8h5"]
+[ext_resource type="PackedScene" uid="uid://h5h8ss5xg1yf" path="res://entities/arm.tscn" id="17_iaomg"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sya21"]
 margin = 0.0
@@ -102,6 +103,12 @@ stream = ExtResource("14_bvvis")
 stream = ExtResource("15_jlucp")
 
 [node name="shield" parent="mesh" instance=ExtResource("16_8c8h5")]
+
+[node name="right_arm" parent="mesh" instance=ExtResource("17_iaomg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.129197, 0.244461, 0)
+
+[node name="left_arm" parent="mesh" instance=ExtResource("17_iaomg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.157384, 0.244461, 0)
 
 [node name="fairy" parent="." instance=ExtResource("14_3ypbf")]
 

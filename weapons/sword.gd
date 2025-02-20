@@ -94,7 +94,12 @@ func setup_slash_animation():
 		player_start_scale = player.find_child("mesh").scale
 		player_target_scale = PLAYER_SCALE_ATTACK
 
+func hold_me():
+	player.right_arm.target = cutt_edge.global_position
+
 func _process(delta: float) -> void:
+	hold_me()
+	
 	if is_charging:
 		handle_charge(delta)
 	
