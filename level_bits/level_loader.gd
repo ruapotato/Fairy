@@ -1,10 +1,10 @@
 extends Node3D
+
 @onready var load_to_point = $loaded_level
 @onready var player = $player
 @onready var pause_menu = $pause_menu
 @onready var key_scene = preload("res://level_bits/key.tscn")
 @onready var music = $music
-
 
 var init_save_location = "hub"
 var active_save_num = 1
@@ -15,7 +15,6 @@ var clover = 0
 var clover_key_given = false
 var paused = false
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	load_save_data()
 	load_level(loaded_level)
@@ -65,6 +64,7 @@ func show_menu():
 func load_level(level_name: String) -> void:
 	clover = 0
 	clover_key_given = false
+	
 	# First, remove any existing children from the load point
 	for child in load_to_point.get_children():
 		child.queue_free()
@@ -83,13 +83,19 @@ func load_level(level_name: String) -> void:
 	else:
 		push_error("Failed to load level: " + level_path)
 	
-	player.global_position = Vector3(0,0,0)
-	player.angular_velocity = Vector3(0,0,0)
-	player.linear_velocity = Vector3(0,0,0)
-	player.save_check_point(Vector3(0,0,0))
+	# Reset player position and state
+	player.global_position = Vector3.ZERO
+	player.velocity = Vector3.ZERO  # Use velocity instead of linear_velocity
+	player.last_safe_position = Vector3.ZERO  # Update checkpoint system
+	
+	# Reset player state
+	player.jumps_remaining = player.MAX_JUMPS
+	player.action_state = player.ActionState.IDLE
+	player.is_attacking = false
+	player.is_rolling = false
+	player.is_invulnerable = false
+	
 	music.play_song()
-	if player.gravity_scale < 0:
-		player.flip_gravity()
 
 func beat_level(key_name) -> void:
 	if not level_keys_list.has(key_name):
@@ -102,19 +108,14 @@ func get_key_count() -> int:
 
 func spawn_clover_key():
 	var spawn_location = player.global_position
-	if player.gravity_scale > 0:
-		spawn_location.y += 2
-	else:
-		spawn_location.y -= 1
+	spawn_location.y += 2  # Always spawn above player since we don't have gravity inversion anymore
 	
 	var new_key = key_scene.instantiate()
 	new_key.name = loaded_level + "_coverkey"
 	load_to_point.add_child(new_key)
 	new_key.global_position = spawn_location
 	player.fairy.key_spawn_message()
-	
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	if not clover_key_given and clover >= 100:
 		clover_key_given = true

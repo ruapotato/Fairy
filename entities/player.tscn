@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://bej60nbr21nhf"]
+[gd_scene load_steps=18 format=3 uid="uid://bej60nbr21nhf"]
 
 [ext_resource type="Script" path="res://entities/player.gd" id="2_ivawi"]
 [ext_resource type="PackedScene" uid="uid://dq2oduog3uqon" path="res://import/player2.glb" id="2_tbhwb"]
@@ -15,14 +15,14 @@
 [ext_resource type="AudioStream" uid="uid://u5l0i52gkx7k" path="res://audio/checkpoint.wav" id="8_f77jv"]
 [ext_resource type="PackedScene" uid="uid://cp3tfcsdvqea1" path="res://entities/fairy.tscn" id="14_3ypbf"]
 [ext_resource type="AudioStream" uid="uid://cyfkojsywoyr2" path="res://audio/sword.wav" id="14_bvvis"]
+[ext_resource type="AudioStream" uid="uid://nh5tcl3dr3v8" path="res://audio/player_toe_tip.wav" id="15_jlucp"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sya21"]
 margin = 0.0
 radius = 0.09
 height = 1.325
 
-[node name="player" type="RigidBody3D"]
-mass = 2.0
+[node name="player" type="CharacterBody3D"]
 script = ExtResource("2_ivawi")
 
 [node name="piv" type="Node3D" parent="."]
@@ -79,15 +79,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0162662, -0.00556868, 0)
 
 [node name="AudioListener3D" type="AudioListener3D" parent="mesh"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.506041, 0)
-current = true
 
 [node name="player_sounds" type="Node3D" parent="mesh"]
 
-[node name="die" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
+[node name="hurt" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
 stream = ExtResource("6_6xmlh")
 max_db = -5.0
 
-[node name="flip" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
+[node name="jump" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
 stream = ExtResource("7_v8a6e")
 max_db = -15.0
 
@@ -97,6 +96,9 @@ stream = ExtResource("8_f77jv")
 
 [node name="dash" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
 stream = ExtResource("14_bvvis")
+
+[node name="land" type="AudioStreamPlayer3D" parent="mesh/player_sounds"]
+stream = ExtResource("15_jlucp")
 
 [node name="fairy" parent="." instance=ExtResource("14_3ypbf")]
 

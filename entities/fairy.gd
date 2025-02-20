@@ -117,8 +117,6 @@ func _process(delta: float) -> void:
 	update_wings(delta)  # Add wing flapping update
 	
 	var player_pos = player.global_position
-	if player.gravity_scale < 0:
-		player_pos.y -= 2
 	var player_moving = (player_pos - last_player_pos).length() > 0.01
 	last_player_pos = player_pos
 	circle_bob_time += delta * 3.0

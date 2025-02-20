@@ -46,4 +46,8 @@ func _process(delta: float) -> void:
 	if player in get_overlapping_bodies():
 		var nearest_spike = find_nearest_spike(player.global_position - Vector3(0,1,0))
 		nearest_spike.material_override = red_spike_material
-		player.die()
+		
+		# Calculate knockback direction away from the spike
+		var knockback_direction = (player.global_position - nearest_spike.global_position).normalized()
+		# Call take_damage with damage amount and knockback direction
+		player.take_damage(1, knockback_direction)

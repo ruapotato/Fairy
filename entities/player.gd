@@ -1,4 +1,4 @@
-extends RigidBody3D
+extends CharacterBody3D
 
 @onready var cam_piv = $piv
 @onready var camera_arm = $piv/SpringArm3D
@@ -6,484 +6,390 @@ extends RigidBody3D
 @onready var mesh = $mesh
 @onready var leg_animator = $mesh/LegAnimator
 @onready var sword = $mesh/sword
-@onready var die_sound = $mesh/player_sounds/die
-@onready var flip_sound = $mesh/player_sounds/flip
-@onready var dash_sound = $mesh/player_sounds/dash
-@onready var check_point_sound = $mesh/player_sounds/check_point_sound
 @onready var collision_shape = $CollisionShape3D
 @onready var fairy = $fairy
+@onready var jump_sound = $mesh/player_sounds/jump
+@onready var land_sound = $mesh/player_sounds/land
+@onready var dash_sound = $mesh/player_sounds/dash
+@onready var hurt_sound = $mesh/player_sounds/hurt
 
 # Movement constants
-const MOVEMENT_FORCE = 250.0
-const MAX_VELOCITY = 3.0
-const MAX_FALL_VELOCITY = 15.0
-const FRICTION_FORCE = 5.0
-const CAMERA_LERP_SPEED = 0.1
-const MIN_ZOOM = 1.0
-const MAX_ZOOM = 10.0
-const LERP_VAL = 0.15
-const GRAVITY_SCALE = 1.0
-const ROTATION_SPEED = 10.0
+const SPEED = 5.0
+const ACCELERATION = 20.0
+const FRICTION = 60.0
+const AIR_FRICTION = 10.0
+const ROTATION_SPEED = 15.0
 const MIN_STRETCH = 1.0
 const MAX_STRETCH = 1.1
 const STRETCH_SPEED = 8.0
-const KNOCKDOWN_DURATION = 3.0
-const KNOCKDOWN_ROTATION_SPEED = 5.0
-const INVULNERABILITY_DURATION = 3.0
-const ACCELERATION_TIME = 1.7  # Time to reach max speed
-const INITIAL_MOVEMENT_FORCE = 70.0  # Starting force
-const MAX_MOVEMENT_FORCE = 250.0  # Maximum force (original MOVEMENT_FORCE value)
-const DASH_FORCE = 8.0
-const DASH_DURATION = 0.5
-const DASH_COOLDOWN = 1.0
-const DASH_ROTATION_SPEED = .1  # Speed of the forward roll
-const DASH_ROTATION = PI/2  # 90 degree rotation down
 
-var insults: Resource
+# Movement States
+enum ActionState {IDLE, WALK, JUMP, TRIPLE_JUMP, GROUND_POUND, ROLL, ATTACK, HURT}
+
+# Jump mechanics - Mario-style values
+const JUMP_VELOCITY = 7.0  # Initial jump velocity
+const TRIPLE_JUMP_VELOCITY = 11.0  # Higher jump for triple jump
+const SUPER_JUMP_VELOCITY = 13.0  # Upward dash jump
+const JUMP_BUFFER_TIME = 0.15
+const COYOTE_TIME = 0.15
+const JUMP_CUT_POWER = 0.4
+const MIN_JUMP_HEIGHT = 0.2
+const GROUND_POUND_VELOCITY = 25.0
+const GROUND_POUND_RECOVERY_JUMP = 8.0
+const MAX_JUMPS = 3
+
+# Triple jump timing
+const TRIPLE_JUMP_WINDOW = 0.5  # Time window to chain jumps
+var jump_count = 0  # For tracking triple jump
+var last_jump_time = 0.0
+var can_triple_jump = false
+
+# Ground pound state
+var is_ground_pounding = false
+var ground_pound_recovery = false
+
+# Combat and movement abilities
+const DASH_SPEED = 12.0
+const DASH_DURATION = .4
+const DASH_COOLDOWN = 0.8
+const ROLL_SPEED = 8.0
+const ROLL_DURATION = 0.5
+const KNOCKBACK_FORCE = 10.0
+const DAMAGE_INVULNERABILITY_TIME = 1.5
+
+# Get the gravity from project settings (should be positive as gravity pulls down)
+var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
+var terminal_velocity = 30.0
+
 # State handling
-enum ActionState {IDLE, WALK, KNOCKDOWN}
 var action_state = ActionState.IDLE
-var gravity_inverted: bool = false
-var knockdown_timer: float = 0.0
-var is_knocked_down: bool = false
-var initial_knockdown_rotation: Vector3
-var target_knockdown_rotation: Vector3
-var is_invulnerable: bool = false
-var invulnerability_timer: float = 0.0
-var initial_mesh_position: Vector3
-var current_movement_force = INITIAL_MOVEMENT_FORCE
-var is_accelerating = false
-var acceleration_timer = 0.0
-var mesh_height
-var level_loader
-
-
-# Movement and visual variables
-var saved_check_point = Vector3(0,0,0)
-var saved_check_point_gravity = GRAVITY_SCALE
+var jumps_remaining = MAX_JUMPS
+var jump_buffer_timer = 0.0
+var coyote_timer = 0.0
+var was_on_floor = false
+var current_stretch = 1.0
 var base_mesh_scale: Vector3
-var current_stretch: float = MIN_STRETCH
-var target_mesh_transform: Transform3D
-var last_movement_direction: Vector3 = Vector3.FORWARD
-var is_dashing: bool = false
-var dash_timer: float = 0.0
-var dash_cooldown_timer: float = 0.0
-var dash_direction: Vector3 = Vector3.ZERO
-var can_dash: bool = true
-var initial_dash_rotation: Vector3
-var target_dash_rotation: Vector3
-var current_dash_rotation: float = 0.0
-var is_grounded: bool = false
-var has_air_dash: bool = true  # New variable to track available air dash
 
+# Movement and combat variables
+var input_dir = Vector2.ZERO
+var direction = Vector3.ZERO
+var last_safe_position = Vector3.ZERO
+var horizontal_velocity = Vector3.ZERO
+var last_movement_direction = Vector3.FORWARD  # Initialize facing forward
+var is_attacking = false
+var attack_combo = 0
+var attack_cooldown = 0.0
+var dash_timer = 0.0
+var dash_cooldown_timer = 0.0
+var can_dash = true
+var roll_timer = 0.0
+var is_rolling = false
+var is_invulnerable = false
+var damage_invulnerability_timer = 0.0
+var is_knocked_down = false
 
-func _ready() -> void:
-	# Configure RigidBody properties 
+func _ready():
+	# Initialize camera and controls
 	camera_arm.add_excluded_object(self)
 	camera_arm.add_excluded_object(mesh)
 	camera_arm.add_excluded_object(sword)
-	lock_rotation = true
-	freeze = false
-	contact_monitor = true
-	linear_damp = 0.01
-	angular_damp = 0.0
-	can_sleep = false
-	gravity_scale = GRAVITY_SCALE
-	mesh_height = collision_shape.shape.height
-	level_loader = get_parent()	
-	
-	base_mesh_scale = mesh.scale
-	initial_mesh_position = mesh.position
-	
-	load_check_point()
 	
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	
 	cam_piv.top_level = true
 	cam_piv.position = Vector3.ZERO
 	
-	update_target_mesh_transform(Vector3.FORWARD)
+	base_mesh_scale = mesh.scale
 	
+	# Initialize leg animator if not present
 	if !leg_animator:
 		var leg_anim = preload("res://entities/legs.gd").new()
 		leg_anim.name = "LegAnimator"
 		mesh.add_child(leg_anim)
 		leg_animator = leg_anim
 
+func _physics_process(delta):
+	handle_movement(delta)
+	handle_abilities(delta)
+	handle_combat(delta)
+	update_timers(delta)
+	update_mesh_visuals(delta)
+	move_and_slide()
 
-func start_knockdown() -> void:
-	if not is_knocked_down and not is_invulnerable:
-		die_sound.play()
-		fairy.insult()
-		
-		is_knocked_down = true
-		action_state = ActionState.KNOCKDOWN
-		knockdown_timer = 0.0
-		
-		initial_knockdown_rotation = mesh.rotation
-		target_knockdown_rotation = initial_knockdown_rotation
-		target_knockdown_rotation += Vector3(0, 0, PI/2 if gravity_inverted else -PI/2)
-		
-		lock_rotation = true
-		freeze = true
-
-func process_knockdown(delta: float) -> void:
-	if is_knocked_down:
-		knockdown_timer += delta
-		
-		if knockdown_timer <= KNOCKDOWN_DURATION:
-			var progress = min(knockdown_timer / 0.5, 1.0)
-			mesh.rotation = initial_knockdown_rotation.lerp(target_knockdown_rotation, ease(progress, delta))
-			
-			var height_adjustment = Vector3(0, -mesh_height if not gravity_inverted else mesh_height, 0)
-			mesh.position = initial_mesh_position.lerp(initial_mesh_position + height_adjustment, ease(progress, delta))
+func handle_movement(delta):
+	# Ground pound takes priority
+	if is_ground_pounding:
+		velocity.y = -GROUND_POUND_VELOCITY
+		if is_on_floor():
+			is_ground_pounding = false
+			ground_pound_recovery = true
+			velocity.y = GROUND_POUND_RECOVERY_JUMP
+			return
+	elif ground_pound_recovery and is_on_floor():
+		ground_pound_recovery = false
+	
+	# Mario-style jump physics
+	if not is_on_floor():
+		# Don't apply any gravity during dash/super jump
+		if dash_timer > 0:
+			# Keep current velocity
+			pass
+		# Apply normal gravity physics
 		else:
-			is_knocked_down = false
-			freeze = false
-			start_invulnerability()
-			action_state = ActionState.IDLE
-			mesh.rotation = initial_knockdown_rotation
-			mesh.position = initial_mesh_position
-			load_check_point()
-
-
-func start_dash() -> void:
-	if not is_dashing and not is_knocked_down:
-		# Ground dash
-		if is_grounded and can_dash:
-			execute_dash()
-		# Air dash
-		elif not is_grounded and has_air_dash:
-			has_air_dash = false  # Consume air dash
-			execute_dash()
-
-
-
-func check_ground_contact(state: PhysicsDirectBodyState3D) -> bool:
-	var space_state = get_world_3d().direct_space_state
-	
-	# Make check distance dynamic based on velocity, but with a minimum
-	var vertical_speed = abs(state.linear_velocity.y)
-	var check_distance = max(1.0, vertical_speed * state.step * 2.0)
-	
-	# Determine ray direction based on gravity
-	var ray_direction = Vector3.DOWN if not gravity_inverted else Vector3.UP
-	
-	# Use global position
-	var base_origin = global_position
-	
-	# More comprehensive ray pattern for better coverage
-	var ray_offsets = [
-		Vector3.ZERO,              # Center
-		Vector3(0.3, 0, 0),       # Right
-		Vector3(-0.3, 0, 0),      # Left
-		Vector3(0, 0, 0.3),       # Front
-		Vector3(0, 0, -0.3),      # Back
-		Vector3(0.3, 0, 0.3),     # Front-Right
-		Vector3(-0.3, 0, 0.3),    # Front-Left
-		Vector3(0.3, 0, -0.3),    # Back-Right
-		Vector3(-0.3, 0, -0.3),   # Back-Left
-	]
-	
-	# Try multiple heights for more reliable detection
-	var height_offsets = [-0.1, 0.0, 0.1]
-	
-	for height in height_offsets:
-		for offset in ray_offsets:
-			var adjusted_origin = base_origin + Vector3(0, height, 0)
-			var ray_start = adjusted_origin + offset
-			var ray_end = ray_start + (ray_direction * check_distance)
+			if velocity.y > 0:
+				velocity.y = velocity.y - gravity * delta
+				# Apply jump cut when jump is released
+				if not Input.is_action_pressed("jump"):
+					velocity.y *= JUMP_CUT_POWER
+			else:
+				# Apply stronger gravity when falling
+				velocity.y = max(velocity.y - gravity * 1.5 * delta, -terminal_velocity)
 			
-			var query = PhysicsRayQueryParameters3D.create(ray_start, ray_end)
-			query.exclude = [self]
-			
-			var collision = space_state.intersect_ray(query)
-			if collision:
-				return true
-	
-	return false
-
-
-func execute_dash() -> void:
-	dash_sound.play()
-	is_dashing = true
-	dash_timer = 0.0
-	dash_direction = last_movement_direction
-	can_dash = false  # Consume ground dash ability and start cooldown
-	
-	# Set up rotation for the dash
-	initial_dash_rotation = mesh.rotation
-	target_dash_rotation = initial_dash_rotation
-	if gravity_inverted:
-		target_dash_rotation += Vector3(DASH_ROTATION, 0, 0)
+		# Handle coyote time
+		if was_on_floor:
+			coyote_timer = COYOTE_TIME
 	else:
-		target_dash_rotation += Vector3(-DASH_ROTATION, 0, 0)
-	current_dash_rotation = 0.0
-
-func process_dash(delta: float) -> void:
-	if is_dashing:
-		dash_timer += delta
-		
-		# Calculate rotation progress
-		var rotation_progress = dash_timer / DASH_DURATION
-		rotation_progress = ease(rotation_progress, 0.1)  # Smooth out the rotation
-		
-		# Update mesh rotation during dash
-		mesh.rotation = initial_dash_rotation.lerp(target_dash_rotation, rotation_progress)
-		
-		if dash_timer >= DASH_DURATION:
-			is_dashing = false
-			dash_timer = 0.0
-			# Reset mesh rotation to normal
-			mesh.rotation = initial_dash_rotation
-			dash_cooldown_timer = 0.0  # Start the cooldown when dash ends
+		# Reset jump mechanics when landing
+		if !was_on_floor:
+			land_sound.play()
+			jumps_remaining = MAX_JUMPS
+			
+			# Handle triple jump timing
+			if jump_count > 0 and Time.get_ticks_msec() - last_jump_time > TRIPLE_JUMP_WINDOW * 1000:
+				jump_count = 0
+			
+			# Handle jump buffer
+			if jump_buffer_timer > 0:
+				perform_jump()
+				jump_buffer_timer = 0
 	
-	# Handle cooldown timer
-	if not can_dash:
-		dash_cooldown_timer += delta
-		if dash_cooldown_timer >= DASH_COOLDOWN:
+	was_on_floor = is_on_floor()
+	
+	# Handle movement
+	if !is_rolling and !is_attacking and !is_ground_pounding and !is_knocked_down:
+		input_dir = Input.get_vector("left", "right", "up", "down")
+		direction = Vector3(input_dir.x, 0, input_dir.y).normalized()
+		direction = direction.rotated(Vector3.UP, cam_piv.rotation.y)
+		
+		if direction:
+			# Update last_movement_direction for mesh rotation
+			last_movement_direction = direction
+			
+			# Accelerate towards target velocity
+			var target_velocity = direction * SPEED
+			horizontal_velocity = horizontal_velocity.move_toward(target_velocity, ACCELERATION * delta)
+			
+			if is_on_floor():
+				action_state = ActionState.WALK
+		else:
+			# Apply friction
+			var friction = FRICTION if is_on_floor() else AIR_FRICTION
+			horizontal_velocity = horizontal_velocity.move_toward(Vector3.ZERO, friction * delta)
+			
+			if is_on_floor():
+				action_state = ActionState.IDLE
+		
+		velocity.x = horizontal_velocity.x
+		velocity.z = horizontal_velocity.z
+
+func handle_abilities(delta):
+	# Update dash
+	if dash_timer > 0:
+		dash_timer -= delta
+		if input_dir.length_squared() < 0.1:
+			# Vertical dash (super jump)
+			velocity.y = SUPER_JUMP_VELOCITY
+			velocity.x = 0
+			velocity.z = 0
+		else:
+			# Normal horizontal dash
+			velocity = direction * DASH_SPEED
+		
+		if dash_timer <= 0:
+			can_dash = false
+			dash_cooldown_timer = DASH_COOLDOWN
+	
+	# Update dash cooldown
+	if !can_dash:
+		dash_cooldown_timer -= delta
+		if dash_cooldown_timer <= 0:
 			can_dash = true
-
-
-func start_invulnerability() -> void:
-	check_point_sound.play()
-	is_invulnerable = true
-	invulnerability_timer = 0.0
-
-func process_invulnerability(delta: float) -> void:
-	if is_invulnerable:
-		invulnerability_timer += delta
-		if invulnerability_timer >= INVULNERABILITY_DURATION:
-			is_invulnerable = false
-		
-		if mesh:
-			mesh.visible = fmod(invulnerability_timer, 0.2) < 0.1
-
-
-func update_target_mesh_transform(velocity: Vector3) -> void:
-	if is_knocked_down:
-		return
-		
-	if is_dashing:
-		return  # Don't update mesh transform during dash
 	
-	var speed = velocity.length() / MAX_VELOCITY
-	current_stretch = lerp(current_stretch, lerp(MIN_STRETCH, MAX_STRETCH, speed), get_physics_process_delta_time() * STRETCH_SPEED)
-	
+	# Update roll
+	if is_rolling:
+		roll_timer -= delta
+		velocity = -mesh.global_transform.basis.z * ROLL_SPEED
+		if roll_timer <= 0:
+			is_rolling = false
+
+func handle_combat(delta):
+	if is_attacking:
+		attack_cooldown -= delta
+		if attack_cooldown <= 0:
+			is_attacking = false
+			attack_combo = 0
+
+func perform_jump():
+	if is_on_floor() or coyote_timer > 0:
+		jump_sound.play()
+		var current_time = Time.get_ticks_msec()
+		
+		# Handle triple jump mechanics
+		if is_on_floor():
+			if jump_count > 0 and (current_time - last_jump_time) <= TRIPLE_JUMP_WINDOW * 1000:
+				jump_count += 1
+				if jump_count >= 3:
+					# Triple jump!
+					velocity.y = TRIPLE_JUMP_VELOCITY
+					action_state = ActionState.TRIPLE_JUMP
+					jump_count = 0
+					return
+			else:
+				jump_count = 1
+			
+			last_jump_time = current_time
+		
+		# Normal jump with Mario-style momentum
+		var jump_force = JUMP_VELOCITY
+		var forward_boost = 1.0
+		action_state = ActionState.JUMP
+			
+		# Mario-style running jump
+		if horizontal_velocity.length() > SPEED * 0.7:
+			jump_force *= 1.2
+			forward_boost = 1.4  # More forward momentum for running jumps
+		
+		# Apply the jump
+		velocity.y = jump_force
+		
+		# Apply forward momentum boost
+		if horizontal_velocity.length() > 0:
+			var current_speed = horizontal_velocity.length()
+			horizontal_velocity = horizontal_velocity.normalized() * (current_speed * forward_boost)
+		
+		coyote_timer = 0
+
+func perform_ground_pound():
+	if not is_on_floor() and not is_ground_pounding:
+		is_ground_pounding = true
+		velocity.y = 0  # Stop vertical movement
+		velocity.x = 0  # Stop horizontal movement
+		velocity.z = 0
+		action_state = ActionState.GROUND_POUND
+
+func perform_super_jump():
+	if is_on_floor():
+		jump_sound.play()
+		velocity.y = SUPER_JUMP_VELOCITY
+		# Reset horizontal velocity for pure vertical jump
+		velocity.x = 0
+		velocity.z = 0
+		# Start the dash timer to prevent gravity from immediately affecting the jump
+		dash_timer = DASH_DURATION
+		can_dash = false
+		dash_cooldown_timer = DASH_COOLDOWN   
+func start_dash():
+	if can_dash:
+		dash_sound.play()
+		dash_timer = DASH_DURATION
+
+func start_roll():
+	if !is_rolling and is_on_floor():
+		is_rolling = true
+		roll_timer = ROLL_DURATION
+
+func perform_attack():
+	if !is_attacking and !is_rolling:
+		is_attacking = true
+		attack_combo = (attack_combo + 1) % 3
+		sword.swipe()
+		attack_cooldown = 0.5
+
+func take_damage(amount: int, knockback_direction: Vector3):
+	if !is_invulnerable:
+		hurt_sound.play()
+		is_invulnerable = true
+		damage_invulnerability_timer = DAMAGE_INVULNERABILITY_TIME
+		velocity = knockback_direction * KNOCKBACK_FORCE
+		velocity.y = JUMP_VELOCITY * 0.5  # Add some upward force
+		action_state = ActionState.HURT
+
+func update_mesh_visuals(delta):
+	# Update target mesh transform based on movement
 	if velocity.length_squared() > 0.01:
-		last_movement_direction = velocity.normalized()
+		# Create the base transform for movement direction
+		var look_basis = Basis.looking_at(last_movement_direction, Vector3.UP)
+		
+		# Create stretch transform
+		var stretch = Transform3D()
+		stretch = stretch.scaled(Vector3(1, 1, current_stretch))
+		
+		# Combine transformations
+		var target_mesh_transform = Transform3D(look_basis, mesh.position) * stretch
+		
+		# Smoothly interpolate to target transform
+		mesh.transform = mesh.transform.interpolate_with(target_mesh_transform, delta * ROTATION_SPEED)
 	
-	# Create the base transform for movement direction
-	var look_basis = Basis.looking_at(last_movement_direction, Vector3.UP)
-	
-	# Create stretch transform
-	var stretch = Transform3D()
-	stretch = stretch.scaled(Vector3(1, 1, current_stretch))
-	
-	# Create flip transform for inverted gravity
-	var flip = Transform3D()
-	if gravity_inverted:
-		flip = flip.rotated(Vector3.RIGHT, PI)
-		flip = flip.rotated(Vector3.UP, PI)
-	
-	# Combine all transformations
-	target_mesh_transform = Transform3D(look_basis, mesh.position) * stretch * flip
+	# Calculate mesh stretch based on movement
+	var speed = velocity.length() / SPEED
+	current_stretch = lerp(current_stretch, lerp(MIN_STRETCH, MAX_STRETCH, speed), delta * STRETCH_SPEED)
 	
 	# Only animate legs when grounded
-	if is_grounded:
-		leg_animator.animate_legs(get_physics_process_delta_time(), speed)
-
-
-func update_mesh_transform(delta: float) -> void:
-	if not is_knocked_down:
-		mesh.transform = mesh.transform.interpolate_with(target_mesh_transform, delta * ROTATION_SPEED)
-
-
-func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
-	if is_knocked_down:
-		return
-		
-	# Update grounded state
-	var was_grounded = is_grounded
-	is_grounded = check_ground_contact(state)
+	if is_on_floor():
+		leg_animator.animate_legs(delta, speed)
 	
-	# Reset abilities when landing
-	if is_grounded and not was_grounded:
-		has_air_dash = true
-	
-	var current_velocity = state.linear_velocity
-	
-	var vertical_velocity = Vector3(0, current_velocity.y, 0)
-	var horizontal_velocity = Vector3(current_velocity.x, 0, current_velocity.z)
-	
-	# Handle dash movement
-	if is_dashing:
-		horizontal_velocity = dash_direction * DASH_FORCE
-		state.linear_velocity = horizontal_velocity  # Remove vertical velocity while dashing
-		return
-	
-	# Get input and handle direction based on gravity
-	var input_dir = Input.get_vector("left", "right", "up", "down") 
-	var direction = Vector3(input_dir.x, 0, input_dir.y).normalized()
-	direction = direction.rotated(Vector3.UP, cam_piv.rotation.y)
-	
-	# Handle acceleration
-	if direction:
-		if !is_accelerating:
-			is_accelerating = true
-			acceleration_timer = 0.0
-			current_movement_force = INITIAL_MOVEMENT_FORCE
-		else:
-			acceleration_timer += state.step
-			var t = min(acceleration_timer / ACCELERATION_TIME, 1.0)
-			# Use ease_in interpolation for smoother acceleration
-			t = ease(t, 2.0)  # You can adjust the ease value for different acceleration curves
-			current_movement_force = lerp(INITIAL_MOVEMENT_FORCE, MAX_MOVEMENT_FORCE, t)
+	# Flash mesh during invulnerability
+	if is_invulnerable:
+		mesh.visible = fmod(damage_invulnerability_timer * 4, 1) > 0.5
 	else:
-		is_accelerating = false
-		acceleration_timer = 0.0
-		current_movement_force = INITIAL_MOVEMENT_FORCE
-	
-	# Wall collision prediction for next physics frame
-	var space_state = get_world_3d().direct_space_state
-	var prediction_distance = abs(vertical_velocity.y) * state.step  # Look ahead one physics frame
-	var ray_origin = global_position
-	
-	# Create multiple raycasts in the fall direction for better collision detection
-	var rays = [
-		Vector3(0, sign(vertical_velocity.y), 0),  # Center
-		Vector3(0.3, sign(vertical_velocity.y), 0),  # Right
-		Vector3(-0.3, sign(vertical_velocity.y), 0),  # Left
-		Vector3(0, sign(vertical_velocity.y), 0.3),  # Front
-		Vector3(0, sign(vertical_velocity.y), -0.3)  # Back
-	]
-	
-	var closest_collision_point = null
-	var closest_collision_distance = INF
-	
-	# Check each ray for collision
-	for ray_offset in rays:
-		var ray_end = ray_origin + (ray_offset.normalized() * prediction_distance)
-		var query = PhysicsRayQueryParameters3D.create(ray_origin, ray_end)
-		query.exclude = [self]
-		
-		var collision = space_state.intersect_ray(query)
-		if collision:
-			var collision_point = collision.position
-			var distance = ray_origin.distance_to(collision_point)
-			if distance < closest_collision_distance:
-				closest_collision_distance = distance
-				closest_collision_point = collision_point
-	
-	# If collision detected, handle it
-	if closest_collision_point != null:
-		# Move slightly back from collision point to prevent clipping
-		var safe_position = closest_collision_point
-		if gravity_inverted:
-			safe_position.y -= mesh_height/1.4
-		else:
-			safe_position.y += mesh_height/1.4
-		state.transform.origin = safe_position
-		vertical_velocity = Vector3.ZERO
-	
-	# Handle horizontal movement
-	if direction:
-		var movement_ray_end = ray_origin + direction * (MAX_VELOCITY * state.step + 0.1)
-		var movement_query = PhysicsRayQueryParameters3D.create(ray_origin, movement_ray_end)
-		movement_query.exclude = [self]
-		
-		var movement_collision = space_state.intersect_ray(movement_query)
-		
-		if !movement_collision:
-			if action_state == ActionState.IDLE:
-				action_state = ActionState.WALK
-			# Apply force with current acceleration
-			state.apply_central_force(direction * current_movement_force)
-		else:
-			var safe_position = movement_collision.position - (direction * 0.01)
-			horizontal_velocity = Vector3.ZERO
-			if action_state == ActionState.WALK:
-				action_state = ActionState.IDLE
-	else:
-		if action_state == ActionState.WALK:
-			action_state = ActionState.IDLE
-		# Instant stop when no input
-		horizontal_velocity = Vector3.ZERO
-	
-	if horizontal_velocity.length() > MAX_VELOCITY:
-		horizontal_velocity = horizontal_velocity.normalized() * MAX_VELOCITY
-	
-	if abs(vertical_velocity.y) > MAX_FALL_VELOCITY:
-		vertical_velocity.y = MAX_FALL_VELOCITY * sign(vertical_velocity.y)
-	
-	state.linear_velocity = horizontal_velocity + vertical_velocity
-	
-	update_target_mesh_transform(horizontal_velocity)
-	update_mesh_transform(state.step)
+		mesh.visible = true  # Make sure mesh is visible when not invulnerable
 
 
+func update_timers(delta):
+	if jump_buffer_timer > 0:
+		jump_buffer_timer -= delta
+	
+	if coyote_timer > 0:
+		coyote_timer -= delta
+	
+	if damage_invulnerability_timer > 0:
+		damage_invulnerability_timer -= delta
+		if damage_invulnerability_timer <= 0:
+			is_invulnerable = false
 
-func flip_gravity() -> void:
-	linear_velocity.y = 0
-	flip_sound.play()
-	gravity_inverted = !gravity_inverted
-	gravity_scale = -gravity_scale
-	update_target_mesh_transform(last_movement_direction)
-	leg_animator.flip_gravity()
-
-func load_check_point():
-	global_position = saved_check_point
-	if saved_check_point_gravity != gravity_scale:
-		flip_gravity()
-
-func save_check_point(to_this_point):
-	if to_this_point != saved_check_point:
-		check_point_sound.play()
-		saved_check_point = to_this_point
-		saved_check_point_gravity = gravity_scale
-
-func die():
-	if not is_invulnerable:
-		start_knockdown()
-
-func update_camera(delta: float) -> void:
-	cam_piv.global_position = global_position
-	camera_arm.position = Vector3(0, 0.44, 0)  # Keep camera height consistent
-
-func _unhandled_input(event: InputEvent) -> void:
-	if is_knocked_down:
-		return
-		
-	if event is InputEventMouseMotion and not level_loader.paused:
+func _unhandled_input(event):
+	if event is InputEventMouseMotion:
 		cam_piv.rotate_y(-event.relative.x * 0.005)
 		camera_arm.rotate_x(-event.relative.y * 0.005)
 		camera_arm.rotation.x = clamp(camera_arm.rotation.x, -PI/2.1, PI/2.1)
 	
-	elif event.is_action_pressed("reverse"):
-		flip_gravity()
-	
-	elif event.is_action_pressed("zoom_in"):
-		camera_arm.spring_length = clamp(camera_arm.spring_length - 0.1, MIN_ZOOM, MAX_ZOOM)
-	
-	elif event.is_action_pressed("zoom_out"):
-		camera_arm.spring_length = clamp(camera_arm.spring_length + 0.1, MIN_ZOOM, MAX_ZOOM)
-			
-	elif event.is_action_pressed("pause"):
-		if level_loader.paused:
-			level_loader.hide_menu()
+	elif event.is_action_pressed("jump"):
+		if is_on_floor() or coyote_timer > 0:
+			perform_jump()
 		else:
-			level_loader.show_menu()
+			jump_buffer_timer = JUMP_BUFFER_TIME
+			
+		# Allow jump to cancel ground pound
+		if is_ground_pounding:
+			is_ground_pounding = false
+			velocity.y = JUMP_VELOCITY
 	
-	elif event.is_action_pressed("swipe"):
-		sword.swipe()
-		
+	elif event.is_action_pressed("attack"):
+		perform_attack()
+	
+	elif event.is_action_pressed("roll"):
+		if is_on_floor():
+			start_roll()
+		else:
+			perform_ground_pound()
+	
 	elif event.is_action_pressed("dash"):
-		start_dash()
-		
-		
-func _process(delta: float) -> void:
-	update_camera(delta)
-	if is_knocked_down:
-		process_knockdown(delta)
-	process_invulnerability(delta)
-	process_dash(delta) 
+		# Super jump if no direction input
+		if input_dir.length_squared() < 0.1 and is_on_floor():
+			perform_super_jump()
+		else:
+			start_dash()
+
+func _process(delta):
+	# Update camera
+	var target_pos = global_position + Vector3(0, 0.44, 0)
+	cam_piv.global_position = cam_piv.global_position.lerp(target_pos, 0.1)
