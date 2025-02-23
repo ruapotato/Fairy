@@ -25,6 +25,8 @@ var max_speed = 3.0
 var trail_distance = 1.5
 var last_player_pos = Vector3.ZERO
 var target_pos = Vector3.ZERO
+var is_ending_possession = false  # Flag to prevent re-entry during end sequence
+
 
 # State
 var is_possessed = false
@@ -49,6 +51,9 @@ func _ready():
 	camera_arm.add_excluded_object(self)
 
 func start_possession():
+	if is_possessed or is_ending_possession:
+		return
+		
 	is_possessed = true
 	camera.current = true
 	spring_arm_pivot.position = global_position + Vector3(0, 0.5, 0)
@@ -56,11 +61,22 @@ func start_possession():
 	camera_arm.rotation = Vector3.ZERO
 
 func end_possession():
+	if !is_possessed or is_ending_possession:
+		return
+		
+	is_ending_possession = true
 	is_possessed = false
 	camera.current = false
 	linear_velocity = Vector3.ZERO
+	
+	# Reset camera
 	spring_arm_pivot.rotation = Vector3.ZERO
 	camera_arm.rotation = Vector3.ZERO
+	
+	# Clear the ending flag after a short delay
+	await get_tree().create_timer(0.1).timeout
+	is_ending_possession = false
+
 
 func _physics_process(delta):
 	if is_possessed:
@@ -137,13 +153,10 @@ func update_wings(delta):
 	wing_right.rotation.y = -wing_rotation
 
 func _unhandled_input(event):
-	if is_possessed:
+	if is_possessed and !is_ending_possession:
 		if event is InputEventMouseMotion:
 			spring_arm_pivot.rotate_y(-event.relative.x * 0.005)
 			camera_arm.rotate_x(-event.relative.y * 0.005)
 			camera_arm.rotation.x = clamp(camera_arm.rotation.x, -PI/4, PI/4)
 			camera_arm.rotation.y = 0
 			camera_arm.rotation.z = 0
-		
-		if event.is_action_pressed("play_flute"):
-			player.end_possession()

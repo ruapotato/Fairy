@@ -27,6 +27,9 @@ const POSSESSION_TRANSITION_TIME = 0.5
 const FLUTE_PLAY_TIME = 1.0
 const MIN_POSSESSION_DISTANCE = 0
 const MAX_POSSESSION_DISTANCE = 10.0
+const POSSESSION_DURATION = 10.0  # Maximum possession time
+const POSSESSION_COOLDOWN = 1.0   # Cooldown before can possess again
+
 # Movement States
 enum ActionState {IDLE, WALK, JUMP, ROLL, ATTACK, BLOCK, HURT, PLAYING_FLUTE, POSSESSING}
 
@@ -55,6 +58,7 @@ var was_on_floor = false
 var is_playing_flute = false
 var flute_timer = 0.0
 var possession_timer = 0.0
+var possession_cooldown_timer = 0.0  # Track cooldown
 var is_possessing = false
 var last_player_position = Vector3.ZERO
 var last_player_rotation = Basis()
@@ -86,24 +90,21 @@ func _ready():
 	last_player_rotation = mesh.transform.basis
 
 	
-
 func _physics_process(delta):
-	# Add to existing physics process
-	if is_playing_flute:
-		flute_timer -= delta
-		if flute_timer <= 0:
-			cancel_flute()
-	
+	# Update possession timer if active
 	if is_possessing:
 		possession_timer -= delta
 		if possession_timer <= 0:
-			possession_timer = 0.0
-			# Complete possession transition
+			end_possession()
+			possession_cooldown_timer = POSSESSION_COOLDOWN
+	elif possession_cooldown_timer > 0:
+		possession_cooldown_timer -= delta
+	
+	# Handle possession input only if not on cooldown
+	if possession_cooldown_timer <= 0:
+		handle_possession_input()
 
-	# Handle possession input
-	handle_possession_input()
-
-	# Only process regular movement if not playing flute or possessing
+	# Only process regular movement if not playing flute and not possessing
 	if !is_playing_flute and !is_possessing:
 		handle_movement(delta)
 		handle_targeting(delta)
@@ -111,13 +112,14 @@ func _physics_process(delta):
 		update_timers(delta)
 		move_and_slide()
 
-
 func handle_possession_input():
 	if Input.is_action_just_pressed("play_flute") and !is_rolling and !is_attacking and !is_blocking:
-		start_playing_flute()
-	elif Input.is_action_just_released("play_flute"):
-		if is_playing_flute and !is_possessing:
-			attempt_possession()
+		if is_possessing:
+			end_possession()
+		else:
+			start_playing_flute()
+	elif Input.is_action_just_released("play_flute") and is_playing_flute and !is_possessing:
+		attempt_possession()
 
 func start_playing_flute():
 	print("Play")
@@ -137,39 +139,34 @@ func attempt_possession():
 			cancel_flute()
 
 func start_possession():
-	print("Possession")
+	print("Starting possession")
 	is_possessing = true
-	possession_timer = POSSESSION_TRANSITION_TIME
+	is_playing_flute = false  # Stop flute state
+	possession_timer = POSSESSION_DURATION
 	action_state = ActionState.POSSESSING
 	
-	# Store player state
-	last_player_position = global_position
-	last_player_rotation = mesh.transform.basis
+	# Keep player visible but maybe semi-transparent
+	#mesh.modulate.a = 0.5  # Set transparency to 50%
 	
-	# Disable player controls
-	set_physics_process(false)
+	# Disable player controls but keep processing for timer
+	set_process_input(false)
 	
 	# Start possession effect
 	chicken_spirit.start_possession()
-	
-	# Hide player mesh
-	mesh.visible = false
 
 func end_possession():
+	print("Ending possession")
 	if is_possessing:
 		is_possessing = false
 		is_playing_flute = false
 		action_state = ActionState.IDLE
+		possession_timer = 0.0
 		
-		# Return to last position
-		global_position = last_player_position
-		mesh.transform.basis = last_player_rotation
+		# Restore player visibility
+		#mesh.modulate.a = 1.0
 		
 		# Re-enable player controls
-		set_physics_process(true)
-		
-		# Show player mesh
-		mesh.visible = true
+		set_process_input(true)
 		
 		# End possession effect
 		chicken_spirit.end_possession()
