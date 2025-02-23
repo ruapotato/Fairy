@@ -8,7 +8,7 @@ extends CharacterBody3D
 @onready var sword = $mesh/sword
 @onready var shield = $mesh/shield  # New shield node
 @onready var collision_shape = $CollisionShape3D
-@onready var fairy = $fairy
+@onready var chicken_spirit = $chicken_spirit
 @onready var jump_sound = $mesh/player_sounds/jump
 @onready var land_sound = $mesh/player_sounds/land
 @onready var shield_sound = $mesh/player_sounds/shield
@@ -23,8 +23,12 @@ const FRICTION = 60.0
 const ROTATION_SPEED = 20.0  # Faster rotation for responsive targeting
 const AERIAL_STRIKE_GRAVITY_MULT = 1.5  # Faster falling during strike
 const AERIAL_STRIKE_SPEED = 3.0
+const POSSESSION_TRANSITION_TIME = 0.5
+const FLUTE_PLAY_TIME = 1.0
+const MIN_POSSESSION_DISTANCE = 0
+const MAX_POSSESSION_DISTANCE = 10.0
 # Movement States
-enum ActionState {IDLE, WALK, JUMP, ROLL, ATTACK, BLOCK, HURT}
+enum ActionState {IDLE, WALK, JUMP, ROLL, ATTACK, BLOCK, HURT, PLAYING_FLUTE, POSSESSING}
 
 # Basic movement mechanics
 const JUMP_VELOCITY = 6.0
@@ -46,6 +50,14 @@ var action_state = ActionState.IDLE
 var jump_buffer_timer = 0.0
 var coyote_timer = 0.0
 var was_on_floor = false
+
+# New variables for possession system
+var is_playing_flute = false
+var flute_timer = 0.0
+var possession_timer = 0.0
+var is_possessing = false
+var last_player_position = Vector3.ZERO
+var last_player_rotation = Basis()
 
 # Movement and combat variables
 var input_dir = Vector2.ZERO
@@ -70,15 +82,103 @@ func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	cam_piv.top_level = true
 	cam_piv.position = Vector3.ZERO
+	last_player_position = global_position
+	last_player_rotation = mesh.transform.basis
 
 	
 
 func _physics_process(delta):
-	handle_movement(delta)
-	handle_targeting(delta)
-	handle_combat(delta)
-	update_timers(delta)
-	move_and_slide()
+	# Add to existing physics process
+	if is_playing_flute:
+		flute_timer -= delta
+		if flute_timer <= 0:
+			cancel_flute()
+	
+	if is_possessing:
+		possession_timer -= delta
+		if possession_timer <= 0:
+			possession_timer = 0.0
+			# Complete possession transition
+
+	# Handle possession input
+	handle_possession_input()
+
+	# Only process regular movement if not playing flute or possessing
+	if !is_playing_flute and !is_possessing:
+		handle_movement(delta)
+		handle_targeting(delta)
+		handle_combat(delta)
+		update_timers(delta)
+		move_and_slide()
+
+
+func handle_possession_input():
+	if Input.is_action_just_pressed("play_flute") and !is_rolling and !is_attacking and !is_blocking:
+		start_playing_flute()
+	elif Input.is_action_just_released("play_flute"):
+		if is_playing_flute and !is_possessing:
+			attempt_possession()
+
+func start_playing_flute():
+	print("Play")
+	if !is_playing_flute and !is_possessing:
+		is_playing_flute = true
+		flute_timer = FLUTE_PLAY_TIME
+		action_state = ActionState.PLAYING_FLUTE
+		# Stop all movement
+		velocity = Vector3.ZERO
+
+func attempt_possession():
+	if chicken_spirit and is_playing_flute:
+		var distance = global_position.distance_to(chicken_spirit.global_position)
+		if distance >= MIN_POSSESSION_DISTANCE and distance <= MAX_POSSESSION_DISTANCE:
+			start_possession()
+		else:
+			cancel_flute()
+
+func start_possession():
+	print("Possession")
+	is_possessing = true
+	possession_timer = POSSESSION_TRANSITION_TIME
+	action_state = ActionState.POSSESSING
+	
+	# Store player state
+	last_player_position = global_position
+	last_player_rotation = mesh.transform.basis
+	
+	# Disable player controls
+	set_physics_process(false)
+	
+	# Start possession effect
+	chicken_spirit.start_possession()
+	
+	# Hide player mesh
+	mesh.visible = false
+
+func end_possession():
+	if is_possessing:
+		is_possessing = false
+		is_playing_flute = false
+		action_state = ActionState.IDLE
+		
+		# Return to last position
+		global_position = last_player_position
+		mesh.transform.basis = last_player_rotation
+		
+		# Re-enable player controls
+		set_physics_process(true)
+		
+		# Show player mesh
+		mesh.visible = true
+		
+		# End possession effect
+		chicken_spirit.end_possession()
+
+func cancel_flute():
+	is_playing_flute = false
+	flute_timer = 0.0
+	action_state = ActionState.IDLE
+
 
 func start_aerial_strike():
 	velocity.y = -AERIAL_STRIKE_SPEED

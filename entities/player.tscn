@@ -12,7 +12,7 @@
 [ext_resource type="AudioStream" uid="uid://h0t44k24ssa4" path="res://audio/player_die.wav" id="6_6xmlh"]
 [ext_resource type="Material" uid="uid://crvy883wu6c3d" path="res://native/coin.tres" id="7_owcj2"]
 [ext_resource type="AudioStream" uid="uid://c70jue3ppwvra" path="res://audio/flip.wav" id="7_v8a6e"]
-[ext_resource type="PackedScene" uid="uid://cp3tfcsdvqea1" path="res://entities/fairy.tscn" id="14_3ypbf"]
+[ext_resource type="PackedScene" uid="uid://cp3tfcsdvqea1" path="res://entities/chicken_spirit.tscn" id="14_3ypbf"]
 [ext_resource type="AudioStream" uid="uid://cyfkojsywoyr2" path="res://audio/sword.wav" id="14_bvvis"]
 [ext_resource type="AudioStream" uid="uid://nh5tcl3dr3v8" path="res://audio/player_toe_tip.wav" id="15_jlucp"]
 [ext_resource type="PackedScene" uid="uid://c4wo4mrqxse3l" path="res://weapons/shield.tscn" id="16_8c8h5"]
@@ -109,6 +109,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.129197, 0.244461, 0)
 [node name="left_arm" parent="mesh" instance=ExtResource("17_iaomg")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.157384, 0.244461, 0)
 
-[node name="fairy" parent="." instance=ExtResource("14_3ypbf")]
+[node name="chicken_spirit" parent="." instance=ExtResource("14_3ypbf")]
 
 [editable path="mesh"]

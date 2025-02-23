@@ -110,7 +110,6 @@ func hold_me():
 	player.right_arm.target = hand_hold.global_position
 
 func _process(delta: float) -> void:
-	print(position)
 	hold_me()
 	
 	if is_charging:

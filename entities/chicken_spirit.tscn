@@ -1,0 +1,37 @@
+[gd_scene load_steps=4 format=3 uid="uid://cp3tfcsdvqea1"]
+
+[ext_resource type="Script" path="res://entities/chicken_spirit.gd" id="1_it54l"]
+[ext_resource type="PackedScene" uid="uid://byt8srwkoiwb7" path="res://import/fairy.glb" id="2_kbjyf"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_nsrhw"]
+radius = 0.065
+
+[node name="chicken_spirit" type="RigidBody3D"]
+mass = 0.1
+gravity_scale = 0.0
+angular_damp = 100.0
+script = ExtResource("1_it54l")
+
+[node name="imported_mesh" parent="." instance=ExtResource("2_kbjyf")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.545864, 0)
+
+[node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="imported_mesh"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52091, 0)
+volume_db = 10.0
+max_db = 6.0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.0233019, -0.00692427)
+shape = SubResource("SphereShape3D_nsrhw")
+
+[node name="piv" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0227961, 0)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="piv"]
+spring_length = 0.3
+
+[node name="Camera3D" type="Camera3D" parent="piv/SpringArm3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.01671, -0.0740816)
+current = true
+
+[editable path="imported_mesh"]
