@@ -9,6 +9,7 @@ extends RigidBody3D
 @onready var camera_arm = $piv/SpringArm3D
 @onready var camera = $piv/SpringArm3D/Camera3D
 @onready var mesh = $imported_mesh
+@onready var leg_animator = $imported_mesh/imported_mesh_og/chicken_legs
 
 # Basic parameters
 var player
@@ -102,8 +103,10 @@ func handle_possessed_movement(delta):
 		linear_velocity = linear_velocity.move_toward(Vector3.ZERO, deceleration * delta)
 	
 	if direction and linear_velocity.length() > 0.01:
+		leg_animator.animate_legs(delta, linear_velocity.length()/5)
 		var look_pos = global_position + linear_velocity.normalized() * 2.0  # Point 2 units ahead
 		mesh.look_at(look_pos)
+		
 
 func handle_following_movement(delta):
 	var player_pos = player.global_position
@@ -138,11 +141,15 @@ func handle_following_movement(delta):
 	
 	# Smoothly move towards target
 	linear_velocity = linear_velocity.lerp(target_velocity, delta * acceleration)
+	leg_animator.animate_legs(delta, linear_velocity.length()/5)
 	
 	# Update rotation to look at player
 	var look_target = player_pos + Vector3.UP * 0.5
 	var target_transform = transform.looking_at(look_target, Vector3.UP)
 	transform.basis = transform.basis.slerp(target_transform.basis, delta * 5.0)
+	if direction and linear_velocity.length() > 0.01:
+		var look_pos = global_position + linear_velocity.normalized() * 2.0  # Point 2 units ahead
+		mesh.look_at(look_pos)
 
 func update_wings(delta):
 	# Simple wing flapping animation

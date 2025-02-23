@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://cp3tfcsdvqea1"]
+[gd_scene load_steps=5 format=3 uid="uid://cp3tfcsdvqea1"]
 
 [ext_resource type="Script" path="res://entities/chicken_spirit.gd" id="1_it54l"]
 [ext_resource type="PackedScene" uid="uid://byt8srwkoiwb7" path="res://import/fairy.glb" id="2_kbjyf"]
+[ext_resource type="Script" path="res://entities/legs.gd" id="3_uhy7b"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_nsrhw"]
 radius = 0.065
@@ -30,6 +31,10 @@ current = true
 
 [node name="imported_mesh_og" parent="imported_mesh" instance=ExtResource("2_kbjyf")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.545864, 0)
+
+[node name="chicken_legs" type="Node3D" parent="imported_mesh/imported_mesh_og"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.505521, 0)
+script = ExtResource("3_uhy7b")
 
 [node name="AudioStreamPlayer3D" type="AudioStreamPlayer3D" parent="imported_mesh/imported_mesh_og"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52091, 0)

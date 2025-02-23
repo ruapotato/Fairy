@@ -4,11 +4,28 @@ extends Node3D
 @onready var right_leg = null
 @onready var sound_on_foot_hit = preload("res://audio/player_toe_tip.wav")
 
-const LEG_SPEED = 25.0  # Speed of leg swing
-const MAX_ANGLE = PI/10  # Maximum swing angle 
-const LEG_LENGTH = 0.4  # Length of each leg
-const RESET_SPEED = 5.0  # Speed at which legs return to neutral
-const SOUND_THRESHOLD = 0.95  # Threshold for playing sound (95% of max angle)
+# Regular leg dimensions
+const REGULAR_LEG_SPEED = 25.0
+const REGULAR_MAX_ANGLE = PI/10
+const REGULAR_LEG_LENGTH = 0.4
+const REGULAR_LEG_RADIUS = 0.03
+const REGULAR_FOOT_LENGTH = 0.15
+
+# Chicken leg dimensions
+const CHICKEN_LEG_SPEED = 35.0
+const CHICKEN_MAX_ANGLE = PI/8
+const CHICKEN_LEG_LENGTH = 0.2
+const CHICKEN_LEG_RADIUS = 0.015
+const CHICKEN_TOE_LENGTH = 0.06
+const CHICKEN_TOE_RADIUS = 0.008
+
+# Dynamic properties based on type
+var LEG_SPEED: float
+var MAX_ANGLE: float
+var LEG_LENGTH: float
+const RESET_SPEED = 5.0
+const SOUND_THRESHOLD = 0.95
+const SOUND_COOLDOWN_TIME: float = 0.1
 
 var time: float = 0.0
 var current_speed: float = 0.0
@@ -17,25 +34,141 @@ var target_rotation = Vector3.ZERO
 var level_loader
 var player
 var cam_arm
+var chicken
+var is_chicken = false
 
 # Track previous angles for sound triggering
 var prev_left_angle: float = 0.0
 var prev_right_angle: float = 0.0
 var sound_cooldown: float = 0.0
-const SOUND_COOLDOWN_TIME: float = 0.1  # Prevent sound spam
+
 
 func _ready():
+	if name == "chicken_legs":
+		is_chicken = true
+		# Set chicken dimensions
+		LEG_SPEED = CHICKEN_LEG_SPEED
+		MAX_ANGLE = CHICKEN_MAX_ANGLE
+		LEG_LENGTH = CHICKEN_LEG_LENGTH
+	else:
+		# Set regular dimensions
+		LEG_SPEED = REGULAR_LEG_SPEED
+		MAX_ANGLE = REGULAR_MAX_ANGLE
+		LEG_LENGTH = REGULAR_LEG_LENGTH
+	
 	level_loader = find_root()
+	chicken = level_loader.find_child("chicken_spirit")
 	player = level_loader.find_child("player")
 	cam_arm = player.find_child("SpringArm3D")
 	
-	# Create the leg meshes if they don't exist
 	if !left_leg:
-		left_leg = create_leg_mesh("left_leg", -0.1)  # Offset to the left
+		left_leg = create_leg_mesh("left_leg", -0.1 if !is_chicken else -0.05)
 	if !right_leg:
-		right_leg = create_leg_mesh("right_leg", 0.1)  # Offset to the right
+		right_leg = create_leg_mesh("right_leg", 0.1 if !is_chicken else 0.05)
 	
 	cam_arm.add_excluded_object(self)
+
+func create_chicken_foot(parent: Node3D):
+	# Create the chicken foot root node
+	var foot = Node3D.new()
+	foot.name = "foot"
+	
+	# Create yellow-orange material for chicken feet
+	var chicken_material = StandardMaterial3D.new()
+	chicken_material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+	chicken_material.albedo_color = Color(0.95, 0.65, 0.0)  # Yellow-orange color
+	
+	# Create three toes
+	# Back toe
+	var back_toe = create_toe(Vector3(0, 0, -CHICKEN_TOE_LENGTH), PI, chicken_material)
+	foot.add_child(back_toe)
+	
+	# Left toe (angled backward)
+	var left_toe = create_toe(Vector3(-CHICKEN_TOE_LENGTH * 0.7, 0, -CHICKEN_TOE_LENGTH * 0.7), PI + PI/4, chicken_material)
+	foot.add_child(left_toe)
+	
+	# Right toe (angled backward)
+	var right_toe = create_toe(Vector3(CHICKEN_TOE_LENGTH * 0.7, 0, -CHICKEN_TOE_LENGTH * 0.7), PI - PI/4, chicken_material)
+	foot.add_child(right_toe)
+	
+	# Position the foot at the bottom of the leg
+	foot.position = Vector3(0, -LEG_LENGTH, 0)
+	parent.add_child(foot)
+
+func create_toe(offset: Vector3, angle: float, material: Material) -> MeshInstance3D:
+	var toe = MeshInstance3D.new()
+	
+	# Create toe mesh
+	var toe_mesh = CapsuleMesh.new()
+	toe_mesh.radius = CHICKEN_TOE_RADIUS
+	toe_mesh.height = CHICKEN_TOE_LENGTH
+	
+	toe.mesh = toe_mesh
+	toe.material_override = material
+	
+	# Position and rotate the toe
+	toe.rotation.y = angle
+	toe.position = offset * 0.5  # Offset from center
+	toe.rotation.x = PI/2  # Point forward
+	
+	return toe
+
+func create_leg_mesh(name: String, offset: float) -> Node3D:
+	var root = Node3D.new()
+	root.name = name
+	add_child(root)
+	
+	root.position = Vector3(offset, 0, 0)
+	
+	# Create the leg mesh
+	var leg = MeshInstance3D.new()
+	leg.name = "mesh"
+	
+	var capsule = CapsuleMesh.new()
+	capsule.radius = CHICKEN_LEG_RADIUS if is_chicken else REGULAR_LEG_RADIUS
+	capsule.height = LEG_LENGTH
+	leg.mesh = capsule
+	
+	# Material for the leg
+	var leg_material = StandardMaterial3D.new()
+	leg_material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
+	if is_chicken:
+		leg_material.albedo_color = Color(0.8, 0.6, 0.0)  # Slightly darker yellow for legs
+	else:
+		leg_material.albedo_color = Color.BLACK
+	
+	leg.material_override = leg_material
+	leg.position = Vector3(0, -LEG_LENGTH/2, 0)
+	root.add_child(leg)
+	
+	# Create appropriate foot based on type
+	if is_chicken:
+		create_chicken_foot(root)
+	else:
+		# Original foot code for regular legs
+		var foot = MeshInstance3D.new()
+		foot.name = "foot"
+		var foot_capsule = CapsuleMesh.new()
+		foot_capsule.radius = REGULAR_LEG_RADIUS
+		foot_capsule.height = REGULAR_FOOT_LENGTH
+		foot.mesh = foot_capsule
+		foot.material_override = leg_material
+		foot.position = Vector3(0, -LEG_LENGTH, -0.05)
+		foot.scale = Vector3(1, 1, 0.8)
+		foot.rotation_degrees = Vector3(90, 0, 0)
+		root.add_child(foot)
+	
+	# Add audio player
+	var audio_player = AudioStreamPlayer3D.new()
+	audio_player.name = name + "_audio"
+	audio_player.stream = sound_on_foot_hit
+	audio_player.unit_size = 2.0 if is_chicken else 3.0
+	audio_player.max_distance = 8.0 if is_chicken else 10.0
+	audio_player.max_db = -15 if is_chicken else -10
+	audio_player.position = Vector3(0, -LEG_LENGTH, 0)
+	root.add_child(audio_player)
+	
+	return root
 
 func find_root(node=get_tree().root) -> Node:
 	if node.name.to_lower() == "level_loader":
@@ -46,68 +179,6 @@ func find_root(node=get_tree().root) -> Node:
 			return found
 	return null
 
-func create_leg_mesh(name: String, offset: float) -> Node3D:
-	# Create a root node for the leg system
-	var root = Node3D.new()
-	root.name = name
-	add_child(root)
-	
-	# Position the root with x offset for leg spacing
-	root.position = Vector3(offset, 0, 0)
-	
-	# Create the leg mesh
-	var leg = MeshInstance3D.new()
-	leg.name = "mesh"
-	
-	# Create a capsule mesh for the leg
-	var capsule = CapsuleMesh.new()
-	capsule.radius = 0.03
-	capsule.height = LEG_LENGTH
-	leg.mesh = capsule
-	
-	# Create an unshaded black material
-	var material = StandardMaterial3D.new()
-	material.shading_mode = StandardMaterial3D.SHADING_MODE_UNSHADED
-	material.albedo_color = Color.BLACK
-	
-	# Apply the material to the leg mesh
-	leg.material_override = material
-	
-	# Position the leg mesh
-	leg.position = Vector3(0, -LEG_LENGTH/2, 0)
-	root.add_child(leg)
-	
-	# Create foot (horizontal part of the L)
-	var foot = MeshInstance3D.new()
-	foot.name = "foot"
-	
-	# Create capsule mesh for foot
-	var foot_capsule = CapsuleMesh.new()
-	foot_capsule.radius = 0.03  # Same as leg
-	foot_capsule.height = 0.15   # Length of foot
-	foot.mesh = foot_capsule
-	
-	# Use same material for foot
-	foot.material_override = material
-	
-	# Position and rotate the foot to make L shape pointing forward
-	foot.position = Vector3(0, -LEG_LENGTH, -0.05)
-	foot.scale = Vector3(1,1,.8)
-	foot.rotation_degrees = Vector3(90, 0, 0)
-	root.add_child(foot)
-	
-	# Add audio player directly to the leg root for easier access
-	var audio_player = AudioStreamPlayer3D.new()
-	audio_player.name = name + "_audio"  # Unique name for each leg's audio
-	audio_player.stream = sound_on_foot_hit
-	audio_player.unit_size = 3.0
-	audio_player.max_distance = 10.0
-	audio_player.max_db = -10
-	# Position the audio player at the foot's position
-	audio_player.position = Vector3(0, -LEG_LENGTH, -0.05)
-	root.add_child(audio_player)
-	
-	return root
 
 func play_foot_sound(leg_node: Node3D):
 	if sound_cooldown <= 0:
