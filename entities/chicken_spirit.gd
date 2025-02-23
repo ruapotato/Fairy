@@ -1,13 +1,14 @@
 extends RigidBody3D
 
 # Core nodes
-@onready var body = $imported_mesh/body
+@onready var body = $imported_mesh/imported_mesh_og/body
 @onready var audio_player = $imported_mesh/AudioStreamPlayer3D
-@onready var wing_left = $imported_mesh/wing2
-@onready var wing_right = $imported_mesh/wing1
+@onready var wing_left = $imported_mesh/imported_mesh_og/wing2
+@onready var wing_right = $imported_mesh/imported_mesh_og/wing1
 @onready var spring_arm_pivot = $piv
 @onready var camera_arm = $piv/SpringArm3D
 @onready var camera = $piv/SpringArm3D/Camera3D
+@onready var mesh = $imported_mesh
 
 # Basic parameters
 var player
@@ -40,11 +41,7 @@ func _ready():
 	player.call_deferred("remove_child", self)
 	level_loader.call_deferred("add_child", self)
 	
-	# Setup physics
-	lock_rotation = true
-	gravity_scale = 0
-	linear_damp = 1.0
-	
+
 	# Camera setup
 	spring_arm_pivot.top_level = true
 	camera.current = false
@@ -56,9 +53,7 @@ func start_possession():
 		
 	is_possessed = true
 	camera.current = true
-	spring_arm_pivot.position = global_position + Vector3(0, 0.5, 0)
-	spring_arm_pivot.rotation = Vector3.ZERO
-	camera_arm.rotation = Vector3.ZERO
+
 
 func end_possession():
 	if !is_possessed or is_ending_possession:
@@ -105,6 +100,10 @@ func handle_possessed_movement(delta):
 		linear_velocity = linear_velocity.lerp(direction * possession_speed, delta * acceleration)
 	else:
 		linear_velocity = linear_velocity.move_toward(Vector3.ZERO, deceleration * delta)
+	
+	if direction and linear_velocity.length() > 0.01:
+		var look_pos = global_position + linear_velocity.normalized() * 2.0  # Point 2 units ahead
+		mesh.look_at(look_pos)
 
 func handle_following_movement(delta):
 	var player_pos = player.global_position
