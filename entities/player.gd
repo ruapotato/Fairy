@@ -89,7 +89,6 @@ func _ready():
 	last_player_position = global_position
 	last_player_rotation = mesh.transform.basis
 
-	
 func _physics_process(delta):
 	# Update possession timer if active
 	if is_possessing:
@@ -104,13 +103,100 @@ func _physics_process(delta):
 	if possession_cooldown_timer <= 0:
 		handle_possession_input()
 
-	# Only process regular movement if not playing flute and not possessing
+	# Always apply basic physics (gravity, landing detection, etc)
+	handle_basic_physics(delta)
+	
+	# Only process movement controls if not playing flute and not possessing
 	if !is_playing_flute and !is_possessing:
-		handle_movement(delta)
+		handle_movement_controls(delta)
 		handle_targeting(delta)
 		handle_combat(delta)
 		update_timers(delta)
-		move_and_slide()
+	
+	# Always process final movement
+	move_and_slide()
+
+func handle_basic_physics(delta):
+	if not is_on_floor():
+		# Apply increased gravity during aerial strike
+		if is_attacking and sword.current_attack_type == sword.AttackType.AERIAL:
+			velocity.y -= gravity * AERIAL_STRIKE_GRAVITY_MULT * delta
+			velocity.x = 0.0
+			velocity.z = 0.0
+		else:
+			velocity.y -= gravity * delta
+		
+		# Handle coyote time
+		if was_on_floor:
+			coyote_timer = COYOTE_TIME
+	else:
+		if !was_on_floor:
+			land_sound.play()
+			
+			# If we landed from aerial strike
+			if is_attacking and sword.current_attack_type == sword.AttackType.AERIAL:
+				is_attacking = false
+				action_state = ActionState.IDLE
+			
+		# Handle jump buffer
+		if jump_buffer_timer > 0.0:
+			perform_jump()
+			jump_buffer_timer = 0.0
+	
+	was_on_floor = is_on_floor()
+
+func handle_movement_controls(delta):
+	# Don't process regular movement if rolling
+	if !is_rolling:
+		input_dir = Input.get_vector("left", "right", "up", "down")
+		
+		if is_targeting and target_enemy:
+			# Strafe movement when targeting
+			var target_dir = (target_enemy.global_position - global_position).normalized()
+			var right = target_dir.cross(Vector3.UP)
+			direction = right * input_dir.x + target_dir * -input_dir.y
+		else:
+			# Normal movement relative to camera
+			direction = Vector3(input_dir.x, 0.0, input_dir.y).normalized()
+			direction = direction.rotated(Vector3.UP, cam_piv.rotation.y)
+		
+		if direction:
+			# Set base speed and modify based on state
+			var current_speed = SPEED
+			
+			# Handle different movement states
+			if is_attacking and !sword.is_charging:
+				current_speed = 0.0  # No movement during attack
+			elif sword.is_charging:
+				current_speed *= sword.CHARGE_MOVEMENT_SPEED_MULT
+			elif is_blocking:
+				current_speed *= 0.4  # 40% speed while blocking
+			
+			# Apply movement
+			velocity.x = direction.x * current_speed
+			velocity.z = direction.z * current_speed
+			
+			# Handle rotation - same logic whether charging or not
+			if !is_targeting and !is_attacking:  # Don't rotate during attack
+				var target_basis = Basis.looking_at(direction, Vector3.UP)
+				mesh.transform.basis = mesh.transform.basis.slerp(target_basis, get_physics_process_delta_time() * ROTATION_SPEED)
+			
+			if is_on_floor():
+				action_state = ActionState.WALK
+				
+			# Animate legs based on actual movement speed
+			var speed = Vector2(velocity.x, velocity.z).length() / SPEED
+			leg_animator.animate_legs(delta, speed)
+		else:
+			# Stop movement when no direction
+			velocity.x = move_toward(velocity.x, 0.0, FRICTION * delta)
+			velocity.z = move_toward(velocity.z, 0.0, FRICTION * delta)
+			
+			if is_on_floor():
+				action_state = ActionState.IDLE
+			
+			# Animate legs with zero speed to return to neutral
+			leg_animator.animate_legs(delta, 0.0)
 
 func handle_possession_input():
 	if Input.is_action_just_pressed("play_flute") and !is_rolling and !is_attacking and !is_blocking:
@@ -127,8 +213,6 @@ func start_playing_flute():
 		is_playing_flute = true
 		flute_timer = FLUTE_PLAY_TIME
 		action_state = ActionState.PLAYING_FLUTE
-		# Stop all movement
-		velocity = Vector3.ZERO
 
 func attempt_possession():
 	if chicken_spirit and is_playing_flute:

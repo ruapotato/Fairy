@@ -2,7 +2,7 @@ extends RigidBody3D
 
 # Core nodes
 @onready var body = $imported_mesh/imported_mesh_og/body
-@onready var audio_player = $imported_mesh/AudioStreamPlayer3D
+@onready var audio_player = $imported_mesh/imported_mesh_og/AudioStreamPlayer3D
 @onready var wing_left = $imported_mesh/imported_mesh_og/wing2
 @onready var wing_right = $imported_mesh/imported_mesh_og/wing1
 @onready var spring_arm_pivot = $piv
