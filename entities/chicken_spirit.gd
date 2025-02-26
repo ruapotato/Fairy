@@ -163,6 +163,6 @@ func _unhandled_input(event):
 		if event is InputEventMouseMotion:
 			spring_arm_pivot.rotate_y(-event.relative.x * 0.005)
 			camera_arm.rotate_x(-event.relative.y * 0.005)
-			camera_arm.rotation.x = clamp(camera_arm.rotation.x, -PI/4, PI/4)
+			camera_arm.rotation.x = clamp(camera_arm.rotation.x, -PI/2, PI/2)
 			camera_arm.rotation.y = 0
 			camera_arm.rotation.z = 0
