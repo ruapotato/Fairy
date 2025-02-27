@@ -39,7 +39,7 @@ func _ready() -> void:
 func is_ground_ahead() -> bool:
 	if not ground_check:
 		return true
-	return ground_check.has_overlapping_bodies()
+	return ground_check.is_colliding()
 
 func setup_initial_direction():
 	if not mesh:
@@ -152,9 +152,11 @@ func chase_player() -> Vector3:
 	
 	# Only return movement vector if there's ground ahead
 	if is_ground_ahead():
+		print("Ground")
 		return direction_to_player * CHASE_SPEED
 	else:
 		# Stop at cliff edge while chasing
+		print("I'll wait here")
 		return Vector3.ZERO
 
 func update_squish_animation(delta: float) -> void:
@@ -187,6 +189,7 @@ func _physics_process(delta: float) -> void:
 	
 	# Check for ground ahead and flip if no ground during patrol
 	if not is_chasing and not is_ground_ahead():
+		print("I'll go the other way")
 		flip_patrol_direction()
 	
 	var movement = chase_player() if is_chasing else patrol()

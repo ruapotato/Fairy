@@ -1,6 +1,5 @@
-[gd_scene load_steps=36 format=3 uid="uid://d2k4sjk2nqlkk"]
+[gd_scene load_steps=35 format=3 uid="uid://d2k4sjk2nqlkk"]
 
-[ext_resource type="PackedScene" uid="uid://x5eqae34nmf7" path="res://level_bits/ground_large.tscn" id="2_yegyx"]
 [ext_resource type="PackedScene" uid="uid://bkq53i8fkkjf8" path="res://entities/blob.tscn" id="3_lbq5w"]
 [ext_resource type="PackedScene" uid="uid://cmg7jfif4ysxi" path="res://import/clover_kingdom.glb" id="4_3iuo8"]
 [ext_resource type="PackedScene" uid="uid://8u2c5gi5txf8" path="res://level_bits/level_portal.tscn" id="6_akp7g"]
@@ -105,13 +104,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.111833, -0.249361, 5.4155)
 transform = Transform3D(-0.999793, 0, 0.0203491, 0, 1, 0, -0.0203491, 0, -0.999793, 0.0340145, 0.844095, -18.0158)
 
 [node name="blob" parent="." instance=ExtResource("3_lbq5w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.89345, 0.308648, -11.0462)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.7431, 0.308648, -11.0462)
 
 [node name="blob2" parent="." instance=ExtResource("3_lbq5w")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.105628, 0.308648, -11.0462)
 
 [node name="blob3" parent="." instance=ExtResource("3_lbq5w")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.79233, 0.308648, -11.0462)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.99013, 0.308648, -11.0462)
 
 [node name="clover_kingdom" parent="." instance=ExtResource("4_3iuo8")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.869471, -25.2362)
@@ -211,8 +210,5 @@ shape = SubResource("ConcavePolygonShape3D_baj3e")
 
 [node name="CollisionShape3D31" type="CollisionShape3D" parent="StaticBody3D"]
 shape = SubResource("ConcavePolygonShape3D_fwerx")
-
-[node name="ground_large" parent="." instance=ExtResource("2_yegyx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.597216, -10.2918)
 
 [editable path="clover_kingdom"]
