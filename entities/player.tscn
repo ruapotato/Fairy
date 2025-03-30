@@ -1,14 +1,11 @@
-[gd_scene load_steps=19 format=3 uid="uid://bej60nbr21nhf"]
+[gd_scene load_steps=16 format=3 uid="uid://bej60nbr21nhf"]
 
 [ext_resource type="Script" path="res://entities/player.gd" id="2_ivawi"]
 [ext_resource type="PackedScene" uid="uid://dq2oduog3uqon" path="res://import/player2.glb" id="2_tbhwb"]
 [ext_resource type="PackedScene" uid="uid://d1bq84v68elhb" path="res://2d_interfaces/game_interface_3d_props.tscn" id="2_yvaq1"]
-[ext_resource type="Material" uid="uid://5by4njtaogfn" path="res://native/player.tres" id="3_0dd4x"]
 [ext_resource type="Script" path="res://entities/legs.gd" id="3_pa33j"]
 [ext_resource type="PackedScene" uid="uid://bif4c56lalkna" path="res://weapons/sword.tscn" id="4_4lhy3"]
 [ext_resource type="Material" uid="uid://ddvrd0cojoou8" path="res://native/skin.tres" id="4_jvhro"]
-[ext_resource type="Material" uid="uid://dld4xjcoeuyud" path="res://native/eyes.tres" id="4_nercs"]
-[ext_resource type="Material" uid="uid://s4h41wyi4660" path="res://native/hair.tres" id="5_xws85"]
 [ext_resource type="AudioStream" uid="uid://h0t44k24ssa4" path="res://audio/player_die.wav" id="6_6xmlh"]
 [ext_resource type="Material" uid="uid://crvy883wu6c3d" path="res://native/coin.tres" id="7_owcj2"]
 [ext_resource type="AudioStream" uid="uid://c70jue3ppwvra" path="res://audio/flip.wav" id="7_v8a6e"]
@@ -56,19 +53,36 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.105191, 0.871933, 0.0914997
 [node name="mesh" parent="." instance=ExtResource("2_tbhwb")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.367852, -0.0646426)
 
-[node name="cape" parent="mesh" index="0"]
-surface_material_override/0 = ExtResource("3_0dd4x")
+[node name="body" parent="mesh" index="0"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
 
 [node name="head" parent="mesh" index="1"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
 surface_material_override/0 = ExtResource("4_jvhro")
 
-[node name="hair" parent="mesh" index="2"]
-surface_material_override/0 = ExtResource("5_xws85")
+[node name="hair_001" parent="mesh" index="2"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
 
-[node name="eye" parent="mesh" index="3"]
-surface_material_override/0 = ExtResource("4_nercs")
+[node name="eyes" parent="mesh" index="3"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
 
-[node name="crown" parent="mesh" index="4"]
+[node name="arm" parent="mesh" index="4"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
+visible = false
+
+[node name="hand" parent="mesh" index="5"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
+visible = false
+
+[node name="leg" parent="mesh" index="6"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
+visible = false
+
+[node name="bag" parent="mesh" index="7"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
+
+[node name="crown" parent="mesh" index="8"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, -0.0155454, 0, 0)
 surface_material_override/0 = ExtResource("7_owcj2")
 
 [node name="LegAnimator" type="Node3D" parent="mesh"]
@@ -104,10 +118,10 @@ stream = ExtResource("15_jlucp")
 [node name="shield" parent="mesh" instance=ExtResource("16_8c8h5")]
 
 [node name="right_arm" parent="mesh" instance=ExtResource("17_iaomg")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.129197, 0.244461, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0747775, 0.267416, 0)
 
 [node name="left_arm" parent="mesh" instance=ExtResource("17_iaomg")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.157384, 0.244461, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.110512, 0.267416, 0)
 
 [node name="chicken_spirit" parent="." instance=ExtResource("14_3ypbf")]
 

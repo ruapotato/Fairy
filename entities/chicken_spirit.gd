@@ -4,7 +4,7 @@ extends RigidBody3D
 @onready var body = $imported_mesh/imported_mesh_og/body
 @onready var audio_player = $imported_mesh/imported_mesh_og/AudioStreamPlayer3D
 @onready var wing_left = $imported_mesh/imported_mesh_og/wing2
-@onready var wing_right = $imported_mesh/imported_mesh_og/wing1
+@onready var wing_right = $imported_mesh/imported_mesh_og/wing
 @onready var spring_arm_pivot = $piv
 @onready var camera_arm = $piv/SpringArm3D
 @onready var camera = $piv/SpringArm3D/Camera3D
@@ -155,8 +155,8 @@ func update_wings(delta):
 	# Simple wing flapping animation
 	wing_time += delta * wing_flap_speed
 	var wing_rotation = sin(wing_time) * wing_flap_amplitude
-	wing_left.rotation.y = wing_rotation
-	wing_right.rotation.y = -wing_rotation
+	wing_left.rotation.z = wing_rotation
+	wing_right.rotation.z = -wing_rotation
 
 func _unhandled_input(event):
 	if is_possessed and !is_ending_possession:

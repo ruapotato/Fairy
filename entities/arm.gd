@@ -2,7 +2,7 @@ extends Node3D
 
 var target = Vector3(0,0,0)
 var blocks = []
-var num_blocks = 8
+var num_blocks = 32
 var block_spacing = 0.05
 var lerp_speed = 10.0
 
@@ -35,9 +35,11 @@ func create_block(name: String) -> Node3D:
 	block.name = name
 	
 	var mesh_instance = MeshInstance3D.new()
-	var cube_mesh = BoxMesh.new()
-	cube_mesh.size = Vector3.ONE * block_spacing
-	mesh_instance.mesh = cube_mesh
+	var mesh = SphereMesh.new()
+	mesh.radius = block_spacing / 2
+	mesh.height = block_spacing / 1
+	mesh_instance.mesh = mesh
+	mesh.material = preload("res://native/shirt.tres")
 	block.add_child(mesh_instance)
 	
 	return block
